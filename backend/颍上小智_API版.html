@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>颍上小智</title>
+    <style>
+        body { font-family: Microsoft YaHei, Arial; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; margin: 0; }
+        .chat { width: 100%; max-width: 500px; background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; text-align: center; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .status { font-size: 12px; opacity: 0.8; margin-top: 5px; }
+        .msgs { height: 400px; overflow-y: auto; padding: 15px; }
+        .msg { margin-bottom: 12px; }
+        .msg-user { text-align: right; }
+        .msg-bot { text-align: left; }
+        .txt { display: inline-block; max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.4; }
+        .msg-user .txt { background: #667eea; color: white; }
+        .msg-bot .txt { background: #f0f0f0; color: #333; }
+        .input-box { display: flex; padding: 12px; border-top: 1px solid #eee; gap: 8px; }
+        .input-box input { flex: 1; padding: 10px 14px; border: 2px solid #ddd; border-radius: 20px; font-size: 14px; outline: none; }
+        .input-box input:focus { border-color: #667eea; }
+        .input-box button { padding: 10px 20px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 14px; }
+        .loading { color: #999; font-size: 12px; text-align: center; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="chat">
+        <div class="header">
+            <h1>🌾 颍上小智</h1>
+            <div class="status" id="status">连接中...</div>
+        </div>
+        <div class="msgs" id="msgs">
+            <div class="msg msg-bot">
+                <div class="txt">你好！我是颍上小智~ 有什么可以帮你的吗？</div>
+            </div>
+        </div>
+        <div class="input-box">
+            <input type="text" id="txt" placeholder="请输入问题...">
+            <button onclick="send()">发送</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/chat';
+        const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+
+        function add(t, isUser) {
+            var d = document.createElement("div");
+            d.className = "msg " + (isUser ? "msg-user" : "msg-bot");
+            d.innerHTML = '<div class="txt">' + t + '</div>';
+            document.getElementById("msgs").appendChild(d);
+            document.getElementById("msgs").scrollTop = document.getElementById("msgs").scrollHeight;
+        }
+
+        function showLoading() {
+            var d = document.createElement("div");
+            d.className = "msg msg-bot";
+            d.id = "loading";
+            d.innerHTML = '<div class="loading">颍小智正在思考...</div>';
+            document.getElementById("msgs").appendChild(d);
+            document.getElementById("msgs").scrollTop = document.getElementById("msgs").scrollHeight;
+        }
+
+        function hideLoading() {
+            var l = document.getElementById("loading");
+            if (l) l.remove();
+        }
+
+        async function send() {
+            var inp = document.getElementById("txt");
+            var q = inp.value.trim();
+            if (!q) return;
+
+            add(q, true);
+            inp.value = "";
+            showLoading();
+
+            try {
+                var res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, message: q })
+                });
+                var data = await res.json();
+
+                hideLoading();
+
+                if (data.error) {
+                    add('抱歉，出错了: ' + data.error, false);
+                } else {
+                    add(data.reply, false);
+                }
+            } catch (e) {
+                hideLoading();
+                add('网络错误，请确保API服务已启动', false);
+            }
+        }
+
+        document.getElementById("txt").onkeypress = function(e) { if (e.key === 'Enter') send(); };
+
+        document.getElementById("status").textContent = "已连接";
+    </script>
+</body>
+</html>

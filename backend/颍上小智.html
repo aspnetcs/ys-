@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>颍上小智</title>
+    <style>
+        body { font-family: Microsoft YaHei, Arial; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; margin: 0; }
+        .chat { width: 100%; max-width: 500px; background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; text-align: center; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .mode-switch { display: flex; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px; margin-top: 10px; }
+        .mode-btn { flex: 1; padding: 8px; border: none; background: transparent; color: white; border-radius: 18px; cursor: pointer; font-size: 13px; transition: all 0.3s; }
+        .mode-btn.active { background: white; color: #667eea; font-weight: bold; }
+        .msgs { height: 350px; overflow-y: auto; padding: 15px; }
+        .msg { margin-bottom: 12px; }
+        .msg-user { text-align: right; }
+        .msg-bot { text-align: left; }
+        .txt { display: inline-block; max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.4; }
+        .msg-user .txt { background: #667eea; color: white; }
+        .msg-bot .txt { background: #f0f0f0; color: #333; }
+        .card { background: #f8f8f8; border-radius: 8px; padding: 10px; margin-top: 8px; border-left: 3px solid #667eea; }
+        .card h4 { color: #667eea; margin: 0 0 5px 0; font-size: 13px; }
+        .card p { margin: 0; font-size: 12px; color: #555; }
+        .input-box { display: flex; padding: 12px; border-top: 1px solid #eee; gap: 8px; }
+        .input-box input { flex: 1; padding: 10px 14px; border: 2px solid #ddd; border-radius: 20px; font-size: 14px; outline: none; }
+        .input-box input:focus { border-color: #667eea; }
+        .input-box button { padding: 10px 16px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 14px; }
+        .mic-btn { background: #ff6b6b !important; }
+        .mic-btn.recording { background: #ff4444 !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+    <div class="chat">
+        <div class="header">
+            <h1>🌾 颍上小智</h1>
+            <div class="mode-switch">
+                <button class="mode-btn active" onclick="switchMode('qa')">问答模式</button>
+                <button class="mode-btn" onclick="switchMode('guanbao')">管鲍对话</button>
+            </div>
+        </div>
+        <div class="msgs" id="msgs">
+            <div class="msg msg-bot">
+                <div class="txt">
+                    你好！我是颍上小智~<br>选择模式：<br>• 问答模式：查询颍上景区信息<br>• 管鲍对话：与历史名人跨时空交流
+                </div>
+            </div>
+        </div>
+        <div class="input-box">
+            <input type="text" id="txt" placeholder="请输入问题...">
+            <button class="mic-btn" id="micBtn" title="点击说话">🎤</button>
+            <button onclick="send()">发送</button>
+        </div>
+    </div>
+
+    <script>
+        // 当前模式
+        var currentMode = 'qa';
+
+        // 问答模式数据
+        var data = {
+            "管仲老街": { "基础信息": "门票：免费 | 开放时间：08:00-22:00", "历史": "这里是春秋时期齐国名相管仲的故里。", "特色": "皖北水乡古韵，青石板路、小桥流水。", "美食": "太和板面、阜阳卷馍、格拉条" },
+            "八里河景区": { "基础信息": "门票：90元 | 开放时间：08:00-17:30 | 5A级景区", "历史": "上世纪90年代将荒滩改造成景区，1996年对外开放。", "特色": "四大主题园区：世界风光、锦绣中华、鸟语林、碧波游览区。", "美食": "八里河活鱼三吃、阜阳格拉条" },
+            "尤家花园": { "基础信息": "门票：50元 | 开放时间：08:00-17:30", "历史": "始建于清末，1922年扩建为苏式园林。", "特色": "四面环水，三条水系分为四区。", "美食": "尤记柿饼、管仲鱼汤" },
+            "迪沟生态园": { "基础信息": "门票：免费 | 开放时间：07:00-17:30 | 4A级景区", "历史": "建于2001年，利用煤矿塌陷区建设。", "特色": "40多种野生动物，地下溶洞。", "美食": "杂鱼汤、地锅鸡" },
+            "湿地公园": { "基础信息": "门票：免费 | 开放时间：全天 | 4A级景区", "历史": "原是五里湖大沟，2010年开始综合治理。", "特色": "全长10公里，三大主题区。", "美食": "五里湖鲜、农家土菜" },
+            "江心洲公园": { "基础信息": "门票：免费 | 开放时间：全天", "历史": "2012年改建，2014年建成。", "特色": "五大功能区，屠隆纪念馆、河洲书院。", "美食": "格拉条、枕头馍" },
+            "明清苑": { "基础信息": "门票：30元 | 开放时间：08:30-17:30", "历史": "皖北地区规模最大的明清古建筑群。", "特色": "融合南北建筑风格，适合古风摄影。", "美食": "周边美食" },
+            "管鲍祠": { "基础信息": "门票：免费 | 开放时间：全天", "历史": "为纪念管仲和鲍叔牙而建。", "特色": "管仲纪念馆，感受历史文化。", "美食": "周边小吃" },
+            "小张庄公园": { "基础信息": "门票：免费 | 开放时间：09:00-18:00", "历史": "曾是全国生态农业旅游示范点。", "特色": "萌宠乐园，适合带孩子玩。", "美食": "周边农家乐" }
+        };
+
+        var syns = { "老街":"管仲老街","八里河":"八里河景区","尤家花园":"尤家花园","迪沟":"迪沟生态园","湿地":"湿地公园","江心洲":"江心洲公园","明清苑":"明清苑","管鲍祠":"管鲍祠","小张庄":"小张庄公园","五里湖":"湿地公园","管仲":"管仲老街" };
+        var intents = { "历史":["历史","由来"], "特色":["特色","特点","好玩"], "美食":["美食","小吃","好吃"], "基础信息":["门票","开放","地址","时间"] };
+        var lastScenic = null;
+
+        // 管鲍对话数据
+        var guanbaoData = {
+            "管仲": {
+                "greeting": "老夫管仲也！有何见解想与老夫探讨？",
+                "qa": {
+                    "你好": "老夫管仲也！有何见解想与老夫探讨？",
+                    "您是谁": "老夫管仲，曾辅佐齐桓公称霸天下。",
+                    "管鲍之交": "管鲍之交，乃老夫与鲍叔牙之深厚友谊也。当年鲍叔牙举荐老夫于桓公，甘居其下，此等胸襟，实属难得！",
+                    "治国": "治国之道，在于民富国强。老夫以为，仓廪实而知礼节，衣食足而知荣辱。",
+                    "人才": "人才乃国家之栋梁。治国之要，在于选贤任能。千里马常有，而伯乐不常有。",
+                    "诚信": "诚信者，国之宝也，民之凭也。一言既出，驷马难追。治国之道，无信不立。",
+                    "经济": "发展经济，宜藏富于民。老夫主张通商贾之便，利农桑之业。"
+                }
+            },
+            "鲍叔牙": {
+                "greeting": "老夫鲍叔牙是也！相逢即是有缘，汝有何事想与老夫叙说？",
+                "qa": {
+                    "你好": "老夫鲍叔牙是也！相逢即是有缘，汝有何事想与老夫叙说？",
+                    "您是谁": "老夫鲍叔牙，与管仲相交深厚，留下管鲍之交佳话。",
+                    "管鲍之交": "管鲍之交，乃老夫与管仲之深厚友谊也。老夫深知管仲之才，荐之于桓公，此等友谊，贵在相知相信！",
+                    "友谊": "友谊之道，贵在相知。老夫与管仲相交，始终以诚相待。无论贫富贵贱，不离不弃。",
+                    "诚信": "诚信乃立身之本。老夫生平最重信诺，一言既出，必有践行。",
+                    "知人": "知人者智，自知者明。老夫与管仲相交多年，深知其才。故举荐于桓公，不计个人得失。"
+                }
+            }
+        };
+        
+        var currentGuanbaoRole = "管仲";
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('msgs').innerHTML = '';
+            
+            if (mode === 'qa') {
+                add('问答模式已激活~ 可以问我：八里河门票、管仲老街历史 等', false);
+            } else {
+                add('管鲍对话模式已激活~ 请选择：管仲 或 鲍叔牙', false);
+            }
+        }
+
+        function add(t, isUser) {
+            var d = document.createElement("div");
+            d.className = "msg " + (isUser ? "msg-user" : "msg-bot");
+            d.innerHTML = '<div class="txt">' + t + '</div>';
+            document.getElementById("msgs").appendChild(d);
+            document.getElementById("msgs").scrollTop = document.getElementById("msgs").scrollHeight;
+        }
+
+        function send() {
+            var inp = document.getElementById("txt");
+            var q = inp.value.trim();
+            if (!q) return;
+            add(q, true);
+            inp.value = "";
+
+            if (currentMode === 'qa') {
+                // 问答模式
+                var scenic = null;
+                for (var k in data) { if (q.indexOf(k) >= 0) { scenic = k; break; } }
+                if (!scenic) { for (var k in syns) { if (q.indexOf(k) >= 0) { scenic = syns[k]; break; } } }
+
+                var intent = "基础信息";
+                for (var k in intents) { for (var i = 0; i < intents[k].length; i++) { if (q.indexOf(intents[k][i]) >= 0) { intent = k; break; } } }
+
+                if (!scenic && lastScenic && intent !== "基础信息") scenic = lastScenic;
+
+                setTimeout(function() {
+                    if (scenic && data[scenic]) {
+                        lastScenic = scenic;
+                        var reply = data[scenic][intent] || data[scenic]["基础信息"];
+                        add('<div class="card"><h4>' + scenic + '</h4><p>' + reply.replace(/\|/g, '<br>') + '</p></div>', false);
+                    } else {
+                        add('抱歉，没找到相关信息~ 可以试试：八里河历史、管仲老街特色 等', false);
+                        lastScenic = null;
+                    }
+                }, 200);
+            } else {
+                // 管鲍对话模式
+                // 检查是否选择角色
+                if (q.indexOf('鲍叔牙') >= 0 || q.indexOf('鲍') >= 0) {
+                    currentGuanbaoRole = "鲍叔牙";
+                    add(guanbaoData["鲍叔牙"].greeting, false);
+                    return;
+                } else if (q.indexOf('管仲') >= 0) {
+                    currentGuanbaoRole = "管仲";
+                    add(guanbaoData["管仲"].greeting, false);
+                    return;
+                }
+                
+                // 查找答案
+                var roleData = guanbaoData[currentGuanbaoRole];
+                var found = false;
+                for (var key in roleData.qa) {
+                    if (q.indexOf(key) >= 0) {
+                        add(roleData.qa[key], false);
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (!found) {
+                    var defaultReplies = {
+                        "管仲": "汝之所问，颇有意思。不妨与老夫细说其中的道理。",
+                        "鲍叔牙": "汝有何见解？但说无妨。"
+                    };
+                    add(defaultReplies[currentGuanbaoRole], false);
+                }
+            }
+        }
+
+        document.getElementById("txt").onkeypress = function(e) { if (e.key === "Enter") send(); };
+
+        // 语音识别
+        var micBtn = document.getElementById("micBtn");
+        var recognition = null;
+        var isRecording = false;
+
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'zh-CN';
+
+            recognition.onstart = function() {
+                isRecording = true;
+                micBtn.classList.add('recording');
+                add('请说话...', false);
+            };
+
+            recognition.onend = function() {
+                isRecording = false;
+                micBtn.classList.remove('recording');
+            };
+
+            recognition.onresult = function(event) {
+                var transcript = event.results[0][0].transcript;
+                document.getElementById("txt").value = transcript;
+                send();
+            };
+
+            recognition.onerror = function(event) {
+                add('语音识别失败: ' + event.error, false);
+                isRecording = false;
+                micBtn.classList.remove('recording');
+            };
+
+            micBtn.onclick = function() {
+                if (isRecording) {
+                    recognition.stop();
+                } else {
+                    try { recognition.start(); } catch (e) { add('语音识别启动失败', false); }
+                }
+            };
+        } else {
+            micBtn.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
