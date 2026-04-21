@@ -33,5 +33,6 @@ yarn-error.log
 bge-small-zh-v1.5/
 backend/ys_rag_db/
 backend/processed_chunks/
+backend/.env
 !颍上小智.html
 !颍上小智_API版.html

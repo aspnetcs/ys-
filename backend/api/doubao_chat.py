@@ -2,12 +2,16 @@
 """颍上小智 - 豆包大模型接入"""
 import requests
 import json
+import os
+from dotenv import load_dotenv
 
-API_KEY = "aea0249a-f824-4caa-8dc1-6ea8e8e96dbd"
+load_dotenv()
 
-API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+API_KEY = os.getenv('ARK_API_KEY', '')
 
-MODEL = "ep-20260314173917-ntg75"
+API_URL = os.getenv('ARK_API_URL', 'https://ark.cn-beijing.volces.com/api/v3/chat/completions')
+
+MODEL = os.getenv('ARK_MODEL_ID', 'ep-20260314173917-ntg75')
 
 SYSTEM_PROMPT = """你是"颍上小智"，一个智能旅游问答助手。
 
@@ -17,7 +21,7 @@ SYSTEM_PROMPT = """你是"颍上小智"，一个智能旅游问答助手。
 
 颍上主要景区信息：
 - 八里河景区：5A级，门票90元，开放时间08:00-17:30
-- 管仲老街：4A级，免费开放，08:00-22:00
+- 管仲老街：免费开放，08:00-22:00
 - 尤家花园：3A级，门票50元
 - 迪沟生态园：4A级，免费开放
 - 湿地公园：4A级，免费开放
